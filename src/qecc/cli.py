@@ -253,6 +253,21 @@ def _cmd_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    if isinstance(args.port, bool) or not (0 <= args.port <= 65535):
+        raise ValueError(f"--port must be an integer in [0, 65535], got {args.port!r}")
+
+    from qecc.web.app import run_server
+
+    return int(
+        run_server(
+            host=args.host,
+            port=args.port,
+            open_browser=not args.no_browser,
+        )
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m qecc.cli",
@@ -356,6 +371,28 @@ def build_parser() -> argparse.ArgumentParser:
     p_bench.add_argument("--quick", action="store_true", help="Run quick inline comparison.")
     p_bench.add_argument("--json", action="store_true", help="Emit JSON output.")
     p_bench.set_defaults(func=_cmd_benchmark)
+
+    p_serve = sub.add_parser(
+        "serve",
+        help="Start the local interactive QECC visualization web server.",
+    )
+    p_serve.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Bind host address (default: 127.0.0.1).",
+    )
+    p_serve.add_argument(
+        "--port",
+        type=int,
+        default=8765,
+        help="TCP port (0 for ephemeral port, default: 8765).",
+    )
+    p_serve.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Do not automatically open a browser window.",
+    )
+    p_serve.set_defaults(func=_cmd_serve)
 
     return parser
 

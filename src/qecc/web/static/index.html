@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QECC &amp; DFS Interactive Companion</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script defer src="/static/i18n.js"></script>
+  <script defer src="/static/bloch3d.js"></script>
+  <script defer src="/static/charts.js"></script>
+  <script defer src="/static/circuit.js"></script>
+  <script defer src="/static/seminar.js"></script>
+  <script defer src="/static/app.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-main">
+      <div class="brand-block">
+        <h1 class="app-title" data-i18n="app.title">QECC &amp; DFS Interactive Companion</h1>
+        <p class="app-subtitle" data-i18n="app.subtitle">Quantum Error Correction Codes, Stabilizers, Coherence &amp; Gain-Threshold Explorer</p>
+        <div class="badge-row">
+          <span class="badge badge-engine" data-i18n="app.badge.engine">Backed by qecc Python Engine (Big-Endian)</span>
+          <span class="badge badge-offline" data-i18n="app.badge.offline">Offline Scientific SPA</span>
+          <span class="badge badge-status" id="engine-status-badge" data-i18n="status.ready">Ready</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="lang-switcher" data-testid="lang-toggle" role="group" aria-label="Language">
+          <span class="lang-label" data-i18n="lang.label">Language</span>
+          <button type="button" class="lang-btn active" data-testid="lang-en" data-lang="en" aria-pressed="true" data-i18n="lang.en">EN</button>
+          <button type="button" class="lang-btn" data-testid="lang-pt-br" data-lang="pt-br" aria-pressed="false" data-i18n="lang.pt_br">PT-BR</button>
+        </div>
+      </div>
+    </div>
+
+    <nav class="primary-nav" role="tablist" data-i18n-aria="nav.aria_label" aria-label="Primary sections">
+      <button type="button" class="nav-tab active" role="tab" aria-selected="true" data-testid="tab-simulator" data-target="section-simulator" data-i18n="nav.simulator">Step Simulator &amp; Bloch</button>
+      <button type="button" class="nav-tab" role="tab" aria-selected="false" data-testid="tab-curves" data-target="section-curves" data-i18n="nav.curves">Analytical &amp; MC Curves (p*)</button>
+      <button type="button" class="nav-tab" role="tab" aria-selected="false" data-testid="tab-theory" data-target="section-theory" data-i18n="nav.theory">Stabilizers &amp; Knill–Laflamme</button>
+      <button type="button" class="nav-tab" role="tab" aria-selected="false" data-testid="tab-seminar" data-target="section-seminar" data-i18n="nav.seminar">Seminar Companion (20 Slides)</button>
+    </nav>
+  </header>
+
+  <main class="app-main">
+    <!-- Persistent Shared Quantum Parameter Control Bar -->
+    <section class="panel control-bar" aria-label="Simulation Parameters">
+      <div class="control-grid">
+        <div class="field-group">
+          <label for="code-select" data-i18n="code.label">Quantum Code</label>
+          <select id="code-select" data-testid="code-select">
+            <option value="bit_flip_3">3-Qubit Bit-Flip Code (bit_flip_3)</option>
+            <option value="phase_flip_3">3-Qubit Phase-Flip Code (phase_flip_3)</option>
+            <option value="five_qubit" selected>[[5,1,3]] Laflamme Perfect Code (five_qubit)</option>
+            <option value="dfs_2">Passive Decoherence-Free Subspace (dfs_2)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="channel-select" data-i18n="channel.label">Noise Channel</label>
+          <select id="channel-select" data-testid="channel-select">
+            <option value="bit_flip">Bit-Flip (bit_flip)</option>
+            <option value="phase_flip">Phase-Flip (phase_flip)</option>
+            <option value="depolarizing" selected>Depolarizing (depolarizing)</option>
+            <option value="collective_dephasing">Collective Dephasing (collective_dephasing)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="state-select" data-i18n="state.label">Input Logical State |ψ⟩</label>
+          <select id="state-select" data-testid="state-select">
+            <option value="0">|0⟩</option>
+            <option value="1">|1⟩</option>
+            <option value="+">|+⟩</option>
+            <option value="-">|-⟩</option>
+            <option value="+i" selected>|+i⟩</option>
+            <option value="-i">|-i⟩</option>
+            <option value="cardinal_avg">cardinal_avg</option>
+            <option value="bloch">Custom Bloch Angles (θ, φ)</option>
+            <option value="custom">Custom Amplitudes (α, β)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="error-mode-select" data-i18n="error_mode.label">Stepper Error Mode</label>
+          <select id="error-mode-select" data-testid="error-mode-select">
+            <option value="stochastic_sample" selected>Stochastic Channel Sample</option>
+            <option value="pauli_string">Deterministic Pauli String</option>
+            <option value="single_qubit_pauli">Single-Qubit Pauli</option>
+            <option value="su2_rotation">Continuous SU(2) Rotation</option>
+            <option value="coherent_collective">Coherent Collective Rz(φ)</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label for="p-input" data-i18n="ctrl.p">Physical error rate p ([0, 1])</label>
+          <input id="p-input" data-testid="p-input" type="number" min="0" max="1" step="0.01" value="0.05">
+        </div>
+
+        <div class="field-group">
+          <label for="phi-input" data-i18n="ctrl.phi">Coherent collective phase φ (rad)</label>
+          <input id="phi-input" data-testid="phi-input" type="number" step="0.05" value="0.00">
+        </div>
+      </div>
+
+      <!-- Conditional State Sub-Controls (bloch / custom) -->
+      <div id="state-subcontrols" class="subcontrol-row hidden">
+        <div id="bloch-state-fields" class="subcontrol-group hidden">
+          <div class="field-group compact">
+            <label for="theta-input" data-i18n="param.theta">Polar angle θ (rad)</label>
+            <input id="theta-input" data-testid="theta-input" type="number" step="0.05" value="1.5708">
+          </div>
+          <div class="field-group compact">
+            <label for="phi-state-input" data-i18n="param.phi_state">Azimuthal angle φ_state (rad)</label>
+            <input id="phi-state-input" data-testid="phi-state-input" type="number" step="0.05" value="1.5708">
+          </div>
+        </div>
+        <div id="custom-state-fields" class="subcontrol-group hidden">
+          <div class="field-group compact">
+            <label for="alpha-re-input" data-i18n="param.alpha_re">Re(α)</label>
+            <input id="alpha-re-input" data-testid="alpha-re-input" type="number" step="0.05" value="0.707107">
+          </div>
+          <div class="field-group compact">
+            <label for="alpha-im-input" data-i18n="param.alpha_im">Im(α)</label>
+            <input id="alpha-im-input" data-testid="alpha-im-input" type="number" step="0.05" value="0">
+          </div>
+          <div class="field-group compact">
+            <label for="beta-re-input" data-i18n="param.beta_re">Re(β)</label>
+            <input id="beta-re-input" data-testid="beta-re-input" type="number" step="0.05" value="0">
+          </div>
+          <div class="field-group compact">
+            <label for="beta-im-input" data-i18n="param.beta_im">Im(β)</label>
+            <input id="beta-im-input" data-testid="beta-im-input" type="number" step="0.05" value="0.707107">
+          </div>
+          <button type="button" class="btn btn-secondary" id="normalize-custom-btn" data-testid="normalize-custom-btn" data-i18n="btn.normalize">Normalize</button>
+          <span class="hint-text" data-i18n="param.normalize_hint">Must satisfy |α|² + |β|² = 1</span>
+        </div>
+      </div>
+
+      <!-- Mode-Specific Sub-Controls & Ensemble Controls -->
+      <div class="subcontrol-row">
+        <div id="mode-pauli-fields" class="subcontrol-group hidden">
+          <div class="field-group compact">
+            <label for="pauli-string-input" data-i18n="ctrl.pauli_string">Pauli string</label>
+            <input id="pauli-string-input" data-testid="pauli-string-input" type="text" value="IXIII" maxlength="8">
+          </div>
+        </div>
+
+        <div id="mode-single-fields" class="subcontrol-group hidden">
+          <div class="field-group compact">
+            <label for="error-qubit-input" data-i18n="ctrl.error_qubit">Target data qubit q</label>
+            <input id="error-qubit-input" data-testid="error-qubit-input" type="number" min="0" max="4" step="1" value="0">
+          </div>
+          <div class="field-group compact">
+            <label for="error-op-select" data-i18n="ctrl.error_op">Pauli operator</label>
+            <select id="error-op-select" data-testid="error-op-select">
+              <option value="I">I</option>
+              <option value="X" selected>X</option>
+              <option value="Y">Y</option>
+              <option value="Z">Z</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="mode-su2-fields" class="subcontrol-group hidden">
+          <div class="field-group compact">
+            <label for="su2-qubit-input" data-i18n="ctrl.su2_qubit">SU(2) target qubit q</label>
+            <input id="su2-qubit-input" data-testid="su2-qubit-input" type="number" min="0" max="4" step="1" value="0">
+          </div>
+          <div class="field-group compact">
+            <label for="su2-theta-input" data-i18n="ctrl.su2_theta">Rotation angle θ (rad)</label>
+            <input id="su2-theta-input" data-testid="su2-theta-input" type="number" step="0.05" value="1.05">
+          </div>
+          <div class="field-group compact">
+            <label for="su2-nx-input" data-i18n="ctrl.su2_nx">Axis n_x</label>
+            <input id="su2-nx-input" data-testid="su2-nx-input" type="number" step="0.1" value="1">
+          </div>
+          <div class="field-group compact">
+            <label for="su2-ny-input" data-i18n="ctrl.su2_ny">Axis n_y</label>
+            <input id="su2-ny-input" data-testid="su2-ny-input" type="number" step="0.1" value="-1">
+          </div>
+          <div class="field-group compact">
+            <label for="su2-nz-input" data-i18n="ctrl.su2_nz">Axis n_z</label>
+            <input id="su2-nz-input" data-testid="su2-nz-input" type="number" step="0.1" value="2">
+          </div>
+        </div>
+
+        <div class="subcontrol-group">
+          <div class="field-group compact">
+            <label for="syndrome-branch-select" data-i18n="ctrl.syndrome_branch">Syndrome branch projection</label>
+            <select id="syndrome-branch-select" data-testid="syndrome-branch-select">
+              <option value="" data-i18n="ctrl.syndrome_auto">Highest-probability branch (auto)</option>
+            </select>
+          </div>
+          <div class="field-group compact">
+            <label for="seed-input" data-i18n="ctrl.seed">PRNG seed</label>
+            <input id="seed-input" data-testid="seed-input" type="number" min="0" step="1" value="42">
+          </div>
+          <div class="field-group compact">
+            <label for="num-shots-input" data-i18n="ctrl.num_shots">Monte Carlo shots</label>
+            <input id="num-shots-input" data-testid="num-shots-input" type="number" min="1" max="200000" step="100" value="1000">
+          </div>
+          <div class="field-group compact">
+            <label for="backend-select" data-i18n="ctrl.backend">Simulation backend</label>
+            <select id="backend-select" data-testid="backend-select">
+              <option value="auto">auto</option>
+              <option value="numpy">numpy</option>
+              <option value="torch_cuda">torch_cuda</option>
+              <option value="eigenkit_unitary">eigenkit_unitary</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button type="button" class="btn btn-primary" id="run-step-btn" data-testid="run-step-btn" data-i18n="btn.run_step">Run Step Evolution</button>
+          <button type="button" class="btn btn-secondary" id="resample-seed-btn" data-testid="resample-seed-btn" data-i18n="btn.resample_seed">New Random Sample</button>
+          <button type="button" class="btn btn-accent" id="run-sim-btn" data-testid="run-sim-btn" data-i18n="btn.run_sim">Run Monte Carlo Cycle</button>
+        </div>
+      </div>
+
+      <p id="active-code-summary" class="code-summary-line"></p>
+      <div id="validation-error" class="alert-banner hidden" data-testid="validation-error" role="alert"></div>
+      <div id="demo-toast" class="toast-banner hidden" role="status"></div>
+    </section>
+
+    <!-- Section 1: Step Simulator, Circuit, Bloch Sphere & 3-Way Coherence -->
+    <section id="section-simulator" class="workspace-section" aria-labelledby="heading-simulator">
+      <div class="section-header">
+        <h2 id="heading-simulator" data-i18n="stage.section_title">Step-by-Step State Evolution Pipeline</h2>
+        <span id="error-applied-badge" class="pill-badge"></span>
+      </div>
+
+      <div class="simulator-layout">
+        <!-- Left/Top: 6-Stage Stepper + Stage Inspector + Circuit -->
+        <div class="panel stepper-panel">
+          <div class="stage-buttons" data-testid="stage-list" role="tablist" aria-label="Algorithm Stages">
+            <button type="button" class="stage-btn" data-stage="initial" data-testid="stage-step-initial" data-i18n="stage.initial.title">1. Initial State (initial)</button>
+            <button type="button" class="stage-btn" data-stage="encoded" data-testid="stage-step-encoded" data-i18n="stage.encoded.title">2. Encoding (encoded)</button>
+            <button type="button" class="stage-btn" data-stage="noisy" data-testid="stage-step-noisy" data-i18n="stage.noisy.title">3. Noise Injection / Discretization (noisy)</button>
+            <button type="button" class="stage-btn" data-stage="syndrome_extracted" data-testid="stage-step-syndrome_extracted" data-i18n="stage.syndrome_extracted.title">4. Ancilla Syndrome Extraction (syndrome_extracted)</button>
+            <button type="button" class="stage-btn" data-stage="recovered" data-testid="stage-step-recovered" data-i18n="stage.recovered.title">5. Conditional Recovery (recovered)</button>
+            <button type="button" class="stage-btn active" data-stage="decoded" data-testid="stage-step-decoded" data-active="true" aria-current="step" data-i18n="stage.decoded.title">6. Decoding &amp; Partial Trace (decoded)</button>
+          </div>
+
+          <div id="stage-detail-card" class="stage-detail-card"></div>
+
+          <div class="circuit-wrapper">
+            <h3 class="subsection-title" data-i18n="circuit.title">Quantum Circuit Diagram (Big-Endian: q₀ MSB)</h3>
+            <div id="circuit-container" class="circuit-container"></div>
+          </div>
+
+          <div id="syndrome-dist-box" class="syndrome-dist-box"></div>
+          <div id="pauli-coeffs-box" class="pauli-coeffs-box hidden"></div>
+        </div>
+
+        <!-- Right/Bottom: 3D Bloch Sphere & 3-Way Coherence Panel -->
+        <div class="visual-column">
+          <div class="panel bloch-panel">
+            <div class="panel-header-row">
+              <h3 class="subsection-title" data-i18n="bloch.title">3D Bloch Sphere &amp; Trajectory</h3>
+              <button type="button" class="btn btn-tiny" id="bloch-reset-btn" data-i18n="bloch.reset">Reset View</button>
+            </div>
+            <div class="canvas-wrap">
+              <canvas id="bloch-canvas" data-testid="bloch-canvas" width="440" height="360"></canvas>
+            </div>
+            <p class="hint-text center" data-i18n="bloch.hint_drag">Drag to rotate 3D view</p>
+            <div id="bloch-legend" class="bloch-legend"></div>
+          </div>
+
+          <div class="panel coherence-panel" data-testid="coherence-panel">
+            <h3 class="subsection-title" data-i18n="coherence.title">Off-Diagonal Coherence |ρ₀₁| &amp; 3-Way Comparison</h3>
+            <div id="coherence-zero-hint" class="info-banner hidden" data-i18n="coherence.zero_basis_note"></div>
+            <div id="coherence-cards" class="coherence-cards"></div>
+            <div id="mc-result-box" class="mc-result-box"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Analytical & Monte Carlo Curves + Gain Thresholds (p*) -->
+    <section id="section-curves" class="workspace-section" aria-labelledby="heading-curves">
+      <div class="section-header">
+        <h2 id="heading-curves" data-i18n="curves.title">Analytical &amp; Monte Carlo Fidelity vs. Error Rate (p)</h2>
+      </div>
+
+      <div class="panel curves-panel">
+        <div class="curves-controls">
+          <div class="field-group">
+            <label for="metric-select" data-i18n="curves.metric.label">Fidelity Metric</label>
+            <select id="metric-select" data-testid="metric-select">
+              <option value="entanglement" selected>Entanglement Fidelity F_e(p) (baseline 1 - p)</option>
+              <option value="state">Haar-Averaged State Fidelity F_state(p) (baseline 1 - 2p/3)</option>
+            </select>
+          </div>
+
+          <div class="field-group compact">
+            <label for="sweep-pmin" data-i18n="curves.p_min">p_min</label>
+            <input id="sweep-pmin" data-testid="sweep-pmin" type="number" min="0" max="1" step="0.05" value="0.0">
+          </div>
+
+          <div class="field-group compact">
+            <label for="sweep-pmax" data-i18n="curves.p_max">p_max</label>
+            <input id="sweep-pmax" data-testid="sweep-pmax" type="number" min="0" max="1" step="0.05" value="0.5">
+          </div>
+
+          <div class="field-group compact">
+            <label for="sweep-nump" data-i18n="curves.num_p">Grid points</label>
+            <input id="sweep-nump" data-testid="sweep-nump" type="number" min="2" max="501" step="1" value="21">
+          </div>
+
+          <div class="action-buttons">
+            <button type="button" class="btn btn-primary" id="refresh-sweeps-btn" data-i18n="btn.run_sweep">Update Curves</button>
+            <button type="button" class="btn btn-accent" id="run-live-mc-btn" data-testid="run-live-mc-btn" data-i18n="curves.run_live_mc">Run Live Monte Carlo Sweep</button>
+          </div>
+        </div>
+
+        <div id="metric-notice-banner" class="metric-notice"></div>
+
+        <div class="curves-grid">
+          <div class="chart-card wide">
+            <div id="curves-chart" data-testid="curves-chart" class="chart-box"></div>
+            <p id="mc-source-label" class="hint-text"></p>
+          </div>
+          <div class="chart-card">
+            <h3 class="subsection-title" data-i18n="curves.delta_chart.title">Net Fidelity Gain (ΔF)</h3>
+            <div id="delta-chart" class="chart-box"></div>
+          </div>
+          <div class="chart-card">
+            <h3 class="subsection-title" data-i18n="curves.coh_chart.title">Analytical Coherence |ρ₀₁|(p) on |+i⟩</h3>
+            <div id="coherence-chart" class="chart-box"></div>
+          </div>
+        </div>
+
+        <div class="pstar-table-wrap">
+          <h3 class="subsection-title" data-i18n="curves.p_star.title">Exact brentq Gain Thresholds (p*)</h3>
+          <div class="table-scroll">
+            <table id="pstar-table" class="data-table"></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Stabilizers, Syndrome Lookup, Enumerator & Knill-Laflamme -->
+    <section id="section-theory" class="workspace-section" aria-labelledby="heading-theory">
+      <div class="section-header">
+        <h2 id="heading-theory" data-i18n="theory.title">Algebraic Structure, Syndrome Lookup &amp; Knill–Laflamme Verification</h2>
+      </div>
+      <div class="panel theory-panel" data-testid="theory-panel">
+        <div id="theory-content" class="theory-grid"></div>
+      </div>
+    </section>
+
+    <!-- Section 4: Graduate Seminar & Live Presentation Companion -->
+    <section id="section-seminar" class="workspace-section" aria-labelledby="heading-seminar">
+      <div class="section-header">
+        <h2 id="heading-seminar" data-i18n="seminar.title">Graduate Seminar &amp; Live Presentation Companion</h2>
+      </div>
+      <div class="panel seminar-panel" data-testid="seminar-panel">
+        <div id="seminar-root"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
